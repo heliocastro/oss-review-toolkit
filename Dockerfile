@@ -40,7 +40,8 @@ RUN /etc/scripts/import_proxy_certs.sh \
 RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         build-essential \
-        ca-certificates \
+        clang-9 \
+        clang++-9 \
         dirmngr \
         clang-9 \
         clang++-9 \
@@ -62,16 +63,9 @@ RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/
         libssl-dev \
         make \
         netbase \
-        openssl \
-        python-dev \
-        python-setuptools \
-        python3-dev \
-        python3-pip \
-        python3-setuptools \
         ruby-dev \
         tk-dev \
         tzdata \
-        unzip \
         uuid-dev \
         unzip \
         xz-utils \
@@ -108,26 +102,56 @@ RUN mkdir -p /opt/ort \
     && cp -a /usr/local/src/ort/helper-cli/build/libs/helper-cli-*.jar /opt/ort/lib/
 
 #------------------------------------------------------------------------
+# PYTHON - Build Python as a separate component with pyenv
+FROM build as pythonbuild
+
+ARG CONAN_VERSION=1.40.3
+ARG PYTHON_VERSION=3.6.15
+ARG PYTHON_VIRTUALENV_VERSION=15.1.0
+ARG PIPTOOL_VERSION=21.3.1
+
+ENV PYENV_ROOT=/opt/python
+RUN curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
+ENV PATH=/opt/python/bin:$PATH
+# Python 3.6.x series has problems with alignment with modern GCC
+# As we don not want patch Python versions we use Clang as compiler
+RUN CC=clang-9 CXX=clang++9 pyenv install "${PYTHON_VERSION}"
+RUN pyenv global "${PYTHON_VERSION}"
+ENV PATH=/opt/python/shims:$PATH
+RUN pip install -U \
+    conan=="${CONAN_VERSION}" \
+    pip=="${PIPTOOL_VERSION}" \
+    pipenv \
+    Mercurial \
+    virtualenv=="${PYTHON_VIRTUALENV_VERSION}" \
+    wheel
+
+COPY docker/python.sh /etc/ort/bash_modules
+
+#------------------------------------------------------------------------
 # Main container
 FROM eclipse-temurin:11-jre
 
 RUN  --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         ca-certificates \
+        cvs \
         curl \
-        git \
         gnupg \
         libarchive-tools \
         openssl \
         unzip
 
-#------------------------------------------------------------------------
 # ORT
 COPY --from=ortbuild /opt/ort /opt/ort
 COPY docker/bash_bootstrap.sh /etc/ort/bash_bootstrap.sh
 COPY docker/ort-wrapper.sh /usr/bin/ort
 COPY docker/ort-wrapper.sh /usr/bin/orth
 RUN chmod 755 /usr/bin/ort
+
+# Python
+COPY --from=pythonbuild /opt/python /opt/python
+COPY --from=pythonbuild /etc/ort/bash_modules/python.sh /etc/ort/bash_modules/
 
 ENV \
     # Package manager versions.
@@ -138,8 +162,6 @@ ENV \
     GO_VERSION=1.16.5 \
     HASKELL_STACK_VERSION=2.1.3 \
     NPM_VERSION=7.20.6 \
-    PYTHON_PIPENV_VERSION=2018.11.26 \
-    PYTHON_VIRTUALENV_VERSION=15.1.0 \
     SBT_VERSION=1.3.8 \
     YARN_VERSION=1.22.10 \
     # SDK versions.
@@ -164,11 +186,12 @@ RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/
         # Install VCS tools (no specific versions required here).
         cvs \
         git \
-        mercurial \
+        gnupg \
         subversion \
         cargo \
         composer=$COMPOSER_VERSION \
         nodejs \
+        openssl \
         sbt=$SBT_VERSION \
     && \
     rm -rf /var/lib/apt/lists/*
@@ -188,8 +211,6 @@ RUN /opt/ort/bin/import_proxy_certs.sh && \
     chmod a+x /usr/local/bin/repo && \
     # Install package managers (in versions known to work).
     npm install --global npm@$NPM_VERSION bower@$BOWER_VERSION yarn@$YARN_VERSION && \
-    pip3 install --no-cache-dir wheel && \
-    pip3 install --no-cache-dir conan==$CONAN_VERSION pipenv==$PYTHON_PIPENV_VERSION virtualenv==$PYTHON_VIRTUALENV_VERSION && \
     # Install golang in order to have `go mod` as package manager.
     curl -ksSO https://dl.google.com/go/go$GO_VERSION.linux-amd64.tar.gz && \
     tar -C /opt -xzf go$GO_VERSION.linux-amd64.tar.gz && \
