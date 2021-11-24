@@ -172,6 +172,19 @@ RUN . $NVM_DIR/nvm.sh \
 COPY docker/nodejs.sh /etc/ort/bash_modules
 
 #------------------------------------------------------------------------
+# GOLANG - Build as a separate component
+FROM build AS gobuild
+
+ARG GO_DEP_VERSION=0.5.4
+ARG GO_VERSION=1.17.3
+ENV GOPATH=/opt/go
+RUN curl -L https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz | tar -C /opt -xz
+ENV PATH=/opt/go/bin:$PATH
+RUN go version
+RUN curl -ksS https://raw.githubusercontent.com/golang/dep/v$GO_DEP_VERSION/install.sh | bash
+RUN echo "add_local_path /opt/go/bin:$PATH" > /etc/ort/bash_modules/go.sh
+
+#------------------------------------------------------------------------
 # REPO / ANDROID SDK
 FROM build AS androidbuild
 
@@ -231,6 +244,10 @@ COPY --from=rubybuild /etc/ort/bash_modules/ruby.sh /etc/ort/bash_modules/
 COPY --from=nodebuild /opt/nodejs /opt/nodejs
 COPY --from=nodebuild /etc/ort/bash_modules/nodejs.sh /etc/ort/bash_modules/
 
+# Golang
+COPY --from=gobuild /opt/go /opt/go/
+COPY --from=gobuild  /etc/ort/bash_modules/go.sh /etc/ort/bash_modules/
+
 # Repo and Android
 COPY --from=androidbuild /usr/bin/repo /usr/bin/
 COPY --from=androidbuild /opt/android-sdk /opt/android-sdk
@@ -266,13 +283,9 @@ RUN curl -ksS "$KEYURL" | gpg --dearmor | tee "/etc/apt/trusted.gpg.d/git-core_u
 
 ENV COMPOSER_VERSION=1.10.1-1 \
     CONAN_VERSION=1.40.3 \
-    GO_DEP_VERSION=0.5.4 \
-    GO_VERSION=1.16.5 \
-    HASKELL_STACK_VERSION=2.1.3 \
-    GOPATH=$HOME/go
+    HASKELL_STACK_VERSION=2.1.3
 
-ENV DEBIAN_FRONTEND=noninteractive \
-    PATH="$PATH:$HOME/.local/bin:$GOPATH/bin:/opt/go/bin"
+ENV PATH="$PATH:$HOME/.local/bin"
 
 # Apt install commands.
 RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt apt-get update \
@@ -295,12 +308,6 @@ RUN /opt/ort/bin/import_proxy_certs.sh && \
     if [ -n "$CRT_FILES" ]; then \
       /opt/ort/bin/import_certificates.sh /tmp/certificates/; \
     fi && \
-    # Install golang in order to have `go mod` as package manager.
-    tar -C /opt -xzf go$GO_VERSION.linux-amd64.tar.gz && \
-    curl -ksSO https://dl.google.com/go/go$GO_VERSION.linux-amd64.tar.gz && \
-    rm go$GO_VERSION.linux-amd64.tar.gz && \
-    mkdir -p $GOPATH/bin && \
-    curl -ksS https://raw.githubusercontent.com/golang/dep/v$GO_DEP_VERSION/install.sh | sh && \
     curl -ksS https://raw.githubusercontent.com/commercialhaskell/stack/v$HASKELL_STACK_VERSION/etc/scripts/get-stack.sh | sh
 
 ENTRYPOINT ["/usr/bin/ort"]
