@@ -190,16 +190,6 @@ RUN mkdir -p /opt/scancode \
 # Main container
 FROM eclipse-temurin:11-jre
 
-RUN  --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        ca-certificates \
-        cvs \
-        curl \
-        gnupg \
-        libarchive-tools \
-        openssl \
-        unzip
-
 # ORT
 COPY --from=ortbuild /opt/ort /opt/ort
 COPY docker/bash_bootstrap.sh /etc/ort/bash_bootstrap.sh
@@ -225,41 +215,53 @@ RUN ln -s /opt/scancode/bin/scancode /usr/bin/scancode \
     && ln -s /opt/scancode/bin/pip /usr/bin/scancode-pip \
     && ln -s /opt/scancode/bin/extractcode /usr/bin/extractcode
 
+RUN  --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        ca-certificates \
+        cvs \
+        curl \
+        gnupg \
+        libarchive-tools \
+        openssl \
+        unzip
+
+# External repositories for SBT
+ARG SBT_VERSION=1.3.8
+ENV KEYURL=https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823
+RUN echo "deb https://repo.scala-sbt.org/scalasbt/debian all main" | tee /etc/apt/sources.list.d/sbt.list
+RUN echo "deb https://repo.scala-sbt.org/scalasbt/debian /" | tee /etc/apt/sources.list.d/sbt_old.list
+RUN curl -ksS "$KEYURL" | gpg --dearmor | tee "/etc/apt/trusted.gpg.d/scala_ubuntu.gpg" > /dev/null
+
+# External repository for latest Git
+ENV KEYURL=https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xa1715d88e1df1f24
+RUN echo "deb http://ppa.launchpad.net/git-core/ppa/ubuntu bionic main" > /etc/apt/sources.list.d/git-core-ubuntu-ppa-bionic.list
+RUN curl -ksS "$KEYURL" | gpg --dearmor | tee "/etc/apt/trusted.gpg.d/git-core_ubuntu_ppa.gpg"  > /dev/null
+
 ENV COMPOSER_VERSION=1.10.1-1 \
     CONAN_VERSION=1.40.3 \
     GO_DEP_VERSION=0.5.4 \
     GO_VERSION=1.16.5 \
     HASKELL_STACK_VERSION=2.1.3 \
-    SBT_VERSION=1.3.8 \
     # SDK versions.
     ANDROID_SDK_VERSION=6858069 \
     # Installation directories.
-    ANDROID_HOME=/opt/android-sDockerfiledk \
+    ANDROID_HOME=/opt/android-sdk \
     GOPATH=$HOME/go
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PATH="$PATH:$HOME/.local/bin:$GOPATH/bin:/opt/go/bin"
 
 # Apt install commands.
-RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt \
-    apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates gnupg software-properties-common && \
-    echo "deb https://repo.scala-sbt.org/scalasbt/debian /" | tee -a /etc/apt/sources.list.d/sbt.list && \
-    curl -ksS "https://keyserver.ubuntu.com/pks/lookup?op=get&options=mr&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823" | apt-key adv --import - && \
-    add-apt-repository -y ppa:git-core/ppa && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-        # Install VCS tools (no specific versions required here).
+RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt apt-get update \
+    && DEBIAN_FRONTEND=noninteractive  apt-get install -y --no-install-recommends \
+        cargo \
+        composer=$COMPOSER_VERSION \
         cvs \
         git \
         gnupg \
-        subversion \
-        cargo \
-        composer=$COMPOSER_VERSION \
-        openssl \
         sbt=$SBT_VERSION \
-    && \
-    rm -rf /var/lib/apt/lists/*
+        subversion \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set this to a directory containing CRT-files for custom certificates that ORT and all build tools should know about.
 ARG CRT_FILES=""
