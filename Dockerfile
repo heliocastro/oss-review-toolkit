@@ -277,6 +277,7 @@ RUN  --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib
         curl \
         gnupg \
         libarchive-tools \
+        netbase \
         openssl \
         unzip
 
