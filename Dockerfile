@@ -230,11 +230,7 @@ RUN mkdir -p /opt/scancode \
 # Main container
 FROM eclipse-temurin:11-jre
 
-# ORT
-COPY --from=ortbuild /opt/ort /opt/ort
-COPY docker/ort-wrapper.sh /usr/bin/ort
-COPY docker/ort-wrapper.sh /usr/bin/orth
-RUN chmod 755 /usr/bin/ort
+COPY docker/00-add_local_path.sh /etc/profile.d/
 
 # Python
 COPY --from=pythonbuild /opt/python /opt/python
@@ -305,6 +301,12 @@ RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/
         sbt=$SBT_VERSION \
         subversion \
     && rm -rf /var/lib/apt/lists/*
+
+# ORT
+COPY --from=ortbuild /opt/ort /opt/ort
+COPY docker/ort-wrapper.sh /usr/bin/ort
+COPY docker/ort-wrapper.sh /usr/bin/orth
+RUN chmod 755 /usr/bin/ort
 
 ENTRYPOINT ["/usr/bin/ort"]
 
