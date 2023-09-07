@@ -419,6 +419,9 @@ RUN --mount=type=cache,target=/var/tmp/gradle \
     :cli:installDist \
     :helper-cli:startScripts \
     && mkdir /opt/ort \
+    && find $HOME/src/ort/ \
+    && find /* \
+    && echo "DONE" \
     && cp -a $HOME/src/ort/cli/build/install/ort /opt/ \
     && cp -a $HOME/src/ort/scripts/*.sh /opt/ort/bin/ \
     && cp -a $HOME/src/ort/helper-cli/build/scripts/orth /opt/ort/bin/ \
