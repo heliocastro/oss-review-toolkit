@@ -89,7 +89,7 @@ runs:
         with:
             context: .
             target: ${{ inputs.name }}
-            push: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+            push: true
             load: false
             build-args: ${{ inputs.build-args }}
             tags: |
