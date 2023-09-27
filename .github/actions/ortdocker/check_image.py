@@ -28,7 +28,12 @@ org = os.getenv("GITHUB_REPOSITORY_OWNER")
 name = os.getenv("INPUT_NAME")
 version = os.getenv("INPUT_VERSION")
 
+print(f"org: {org}")
+print(f"name: {name}")
+print(f"version: {version}")
+
 url = f"https://api.github.com/orgs/{org}/packages/container/ort%2F{name}/versions"
+print(url)
 
 headers = {
     "Accept": "application/vnd.github+json",
@@ -36,15 +41,20 @@ headers = {
 }
 response = requests.get(url, headers=headers)
 if response.status_code == 404:
-    print("none")
-else:
-    versions = [
-        item
-        for sublist in [v["metadata"]["container"]["tags"] for v in response.json()]
-        if sublist
-        for item in sublist
-    ]
-    if version in versions:
-        print("found")
-    else:
+    # Try user
+    url = f"https://api.github.com/user/packages/container/ort%2F{name}/versions"
+    response = requests.get(url, headers=headers)
+    if response.status_code == 404:
         print("none")
+        exit(0)
+
+versions = [
+    item
+    for sublist in [v["metadata"]["container"]["tags"] for v in response.json()]
+    if sublist
+    for item in sublist
+]
+if version in versions:
+    print("found")
+else:
+    print("none")
