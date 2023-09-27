@@ -44,17 +44,17 @@ if response.status_code == 404:
     # Try user
     url = f"https://api.github.com/user/packages/container/ort%2F{name}/versions"
     response = requests.get(url, headers=headers)
-    if response.status_code == 404:
-        print("none")
-        exit(0)
 
-versions = [
-    item
-    for sublist in [v["metadata"]["container"]["tags"] for v in response.json()]
-    if sublist
-    for item in sublist
-]
-if version in versions:
-    print("found")
-else:
+if response.status_code == 404:
     print("none")
+else:
+    versions = [
+        item
+        for sublist in [v["metadata"]["container"]["tags"] for v in response.json()]
+        if sublist
+        for item in sublist
+    ]
+    if version in versions:
+        print("found")
+    else:
+        print("none")
