@@ -183,7 +183,7 @@ jobs:
       - name: Get ORT current version
         run: |
           ORT_VERSION=$(./gradlew -q properties --property version | sed -nr "s/version: (.+)/\1/p")
-          echo "ORT_VERSION="$ORT_VERSION" >> $GITHUB_ENV
+          echo "ORT_VERSION=$ORT_VERSION" >> $GITHUB_ENV
 
       - name: Set up Docker build
         uses: docker/setup-buildx-action@v3
