@@ -28,7 +28,7 @@ org = os.getenv("GITHUB_REPOSITORY_OWNER")
 name = os.getenv("INPUT_NAME")
 version = os.getenv("INPUT_VERSION")
 
-url = f"https://api.github.com/orgs/{org}/packages/container/ort%2F{name}/versions"
+url = f"https://api.github.com/user/packages/container/ort%2F{name}/versions"
 
 headers = {
     "Accept": "application/vnd.github+json",
