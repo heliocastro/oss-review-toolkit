@@ -203,9 +203,10 @@ jobs:
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/ort
           tags: |
             type=schedule,pattern={{date 'YYYYMMDD'}}
+            type=schedule,pattern=nightly
             type=pep440,pattern={{version}}
             type=raw,value=${{ env.ORT_VERSION }}
-            type=raw,value=snapshot,event=push
+            type=ref,event=tag
 
       - name: Build ORT runtime image
         uses: docker/build-push-action@v5
