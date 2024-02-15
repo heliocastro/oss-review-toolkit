@@ -65,6 +65,9 @@ runs:
         result=$(python ./.github/actions/ortdocker/check_image.py)
         echo "result=$result" >> $GITHUB_OUTPUT
 
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
     - name: Set up Docker build
       if: steps.check_image.outputs.result != 'found'
       uses: docker/setup-buildx-action@v3
@@ -95,6 +98,7 @@ runs:
       uses: docker/build-push-action@v5
       with:
         context: .
+        platforms: linux/amd64,linux/arm64
         target: ${{ inputs.name }}
         push: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
         load: false
@@ -111,6 +115,7 @@ runs:
       uses: docker/build-push-action@v5
       with:
         context: .
+        platforms: linux/amd64,linux/arm64
         target: ${{ inputs.name }}
         push: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
         load: false
