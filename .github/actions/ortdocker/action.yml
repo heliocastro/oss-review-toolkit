@@ -66,6 +66,7 @@ runs:
         echo "result=$result" >> $GITHUB_OUTPUT
 
     - name: Set up QEMU
+      if: steps.check_image.outputs.result != 'found'
       uses: docker/setup-qemu-action@v3
 
     - name: Set up Docker build
