@@ -394,11 +394,9 @@ RUN mkdir -p $DOTNET_HOME \
     curl -L https://aka.ms/dotnet/$DOTNET_VERSION/dotnet-sdk-linux-arm64.tar.gz | tar -C $DOTNET_HOME -xz; \
     else \
     curl -L https://aka.ms/dotnet/$DOTNET_VERSION/dotnet-sdk-linux-x64.tar.gz | tar -C $DOTNET_HOME -xz; \
+    mkdir -p $DOTNET_HOME/bin; \
+    curl -L https://github.com/nexB/nuget-inspector/releases/download/v$NUGET_INSPECTOR_VERSION/nuget-inspector-v$NUGET_INSPECTOR_VERSION-linux-x64.tar.gz | tar --strip-components=1 -C $DOTNET_HOME/bin -xz; \
     fi
-
-RUN mkdir -p $DOTNET_HOME/bin \
-    && curl -L https://github.com/nexB/nuget-inspector/releases/download/v$NUGET_INSPECTOR_VERSION/nuget-inspector-v$NUGET_INSPECTOR_VERSION-linux-x64.tar.gz \
-    | tar --strip-components=1 -C $DOTNET_HOME/bin -xz
 
 FROM scratch AS dotnet
 COPY --from=dotnetbuild /opt/dotnet /opt/dotnet
